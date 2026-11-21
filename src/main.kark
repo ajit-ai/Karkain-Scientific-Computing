@@ -1,0 +1,145 @@
+// Karkain Scientific Computing - first functional slice.
+// Batch numerical workspace: define matrices, multiply, compute statistics,
+// persist state, and emit a deterministic report. Builtins only.
+
+func parse_nums(text) {
+    let txt = split(text, ",")
+    let out = []
+    let i = 0
+    while (i < len(txt)) {
+        push(out, int(trim(txt[i])))
+        i = i + 1
+    }
+    return out
+}
+
+func find_matrix(state, name) {
+    let i = 0
+    while (i < len(state)) {
+        let f = split(state[i], "|")
+        if (f[0] == name) { return state[i] }
+        i = i + 1
+    }
+    return ""
+}
+
+func put_matrix(state, name, rows, cols, values) {
+    let rec = name + "|" + str(rows) + "|" + str(cols) + "|"
+    let i = 0
+    while (i < len(values)) {
+        rec = rec + str(values[i])
+        if (i + 1 < len(values)) { rec = rec + "," }
+        i = i + 1
+    }
+    let out = []
+    let j = 0
+    let replaced = 0
+    while (j < len(state)) {
+        let f = split(state[j], "|")
+        if (f[0] == name) { push(out, rec); replaced = 1 } else { push(out, state[j]) }
+        j = j + 1
+    }
+    if (replaced == 0) { push(out, rec) }
+    return out
+}
+
+func get_values(rec) {
+    let f = split(rec, "|")
+    return parse_nums(f[3])
+}
+
+func matrix_mul(state, a_name, b_name) {
+    let ra = find_matrix(state, a_name)
+    let rb = find_matrix(state, b_name)
+    if (ra == "" || rb == "") { print("ERROR unknown matrix"); return state }
+    let fa = split(ra, "|")
+    let fb = split(rb, "|")
+    let ar = int(fa[1])
+    let ac = int(fa[2])
+    let br = int(fb[1])
+    let bc = int(fb[2])
+    if (ac != br) { print("ERROR dimension mismatch"); return state }
+    let av = get_values(ra)
+    let bv = get_values(rb)
+    let res = []
+    let i = 0
+    while (i < ar) {
+        let j = 0
+        while (j < bc) {
+            let sum = 0
+            let k = 0
+            while (k < ac) {
+                sum = sum + av[i * ac + k] * bv[k * bc + j]
+                k = k + 1
+            }
+            push(res, sum)
+            j = j + 1
+        }
+        i = i + 1
+    }
+    let name = a_name + "x" + b_name
+    let ns = put_matrix(state, name, ar, bc, res)
+    print("PRODUCT " + name + " " + str(ar) + "x" + str(bc) + " " + str(res[0]))
+    return ns
+}
+
+func matrix_stats(state, name) {
+    let rec = find_matrix(state, name)
+    if (rec == "") { print("ERROR unknown matrix"); return }
+    let v = get_values(rec)
+    let sum = 0
+    let mn = v[0]
+    let mx = v[0]
+    let i = 0
+    while (i < len(v)) {
+        sum = sum + v[i]
+        if (v[i] < mn) { mn = v[i] }
+        if (v[i] > mx) { mx = v[i] }
+        i = i + 1
+    }
+    print("STATS " + name + " sum=" + str(sum) + " min=" + str(mn) + " max=" + str(mx) + " avg=" + str(sum / len(v)))
+}
+
+func persist(path, state) {
+    let out = ""
+    let i = 0
+    while (i < len(state)) {
+        out = out + state[i] + "\n"
+        i = i + 1
+    }
+    writeFile(path, out)
+}
+
+func main() {
+    let cmd_path = "data/commands.dat"
+    let state_path = "data/state.dat"
+    let report_path = "data/report.dat"
+    let txt = readFile(cmd_path)
+    let cmds = split(txt, "\n")
+    let state = split(readFile(state_path), "\n")
+    let report = ""
+    let i = 0
+    while (i < len(cmds)) {
+        let line = trim(cmds[i])
+        if (line != "") {
+            let f = split(line, "|")
+            let op = f[0]
+            if (op == "MATRIX") {
+                state = put_matrix(state, f[1], int(f[2]), int(f[3]), parse_nums(f[4]))
+                report = report + "MATRIX " + f[1] + " " + f[2] + "x" + f[3] + "\n"
+            }
+            if (op == "MUL") {
+                state = matrix_mul(state, f[1], f[2])
+                report = report + "MUL " + f[1] + " " + f[2] + "\n"
+            }
+            if (op == "STATS") {
+                matrix_stats(state, f[1])
+                report = report + "STATS " + f[1] + "\n"
+            }
+        }
+        i = i + 1
+    }
+    persist(state_path, state)
+    persist(report_path, split(report, "\n"))
+    print("SCIENTIFIC_COMPUTING_OK matrices=" + str(len(state)))
+}

@@ -1,0 +1,43 @@
+func test_parse_nums() {
+    let txt = split("1,2,3", ",")
+    let out = []
+    let i = 0
+    while (i < len(txt)) {
+        push(out, int(trim(txt[i])))
+        i = i + 1
+    }
+    assert_eq(len(out), 3)
+    assert_eq(out[0] + out[2], 4)
+}
+
+func test_matrix_multiply_core() {
+    let a = [1, 2, 3, 4]
+    let b = [5, 6, 7, 8]
+    let res = []
+    let i = 0
+    while (i < 2) {
+        let j = 0
+        while (j < 2) {
+            let sum = 0
+            let k = 0
+            while (k < 2) {
+                sum = sum + a[i * 2 + k] * b[k * 2 + j]
+                k = k + 1
+            }
+            push(res, sum)
+            j = j + 1
+        }
+        i = i + 1
+    }
+    assert_eq(len(res), 4)
+    assert_eq(res[0], 19)
+    assert_eq(res[3], 50)
+}
+
+func test_delimited_state() {
+    let rec = "A|1|2|3,5"
+    let f = split(rec, "|")
+    assert_eq(f[0], "A")
+    assert_eq(int(f[1]), 1)
+    assert_eq(len(split(f[3], ",")), 2)
+}
