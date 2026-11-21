@@ -1,6 +1,7 @@
 // Karkain Scientific Computing - first functional slice.
 // Batch numerical workspace: define matrices, multiply, compute statistics,
 // persist state, and emit a deterministic report. Builtins only.
+import numerics_r2
 
 func parse_nums(text) {
     let txt = split(text, ",")
@@ -142,4 +143,5 @@ func main() {
     persist(state_path, state)
     persist(report_path, split(report, "\n"))
     print("SCIENTIFIC_COMPUTING_OK matrices=" + str(len(state)))
+    r2_run()
 }

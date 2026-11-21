@@ -1,0 +1,230 @@
+// Karkain Scientific Computing - Round 2: extended numerical operations.
+// Additive to Round 1. All helpers are r2_ prefixed because imported modules
+// share one global function namespace. No top-level statements here.
+
+func r2_lines(path) {
+    let txt = split(readFile(path), "\n")
+    let out = []
+    let i = 0
+    while (i < len(txt)) {
+        if (txt[i] != "") { push(out, trim(txt[i])) }
+        i = i + 1
+    }
+    return out
+}
+
+func r2_nums(txt) {
+    let parts = split(txt, ",")
+    let out = []
+    let i = 0
+    while (i < len(parts)) {
+        push(out, int(trim(parts[i])))
+        i = i + 1
+    }
+    return out
+}
+
+func r2_find(state, name) {
+    let i = 0
+    while (i < len(state)) {
+        let f = split(state[i], "|")
+        if (f[0] == name) { return state[i] }
+        i = i + 1
+    }
+    return ""
+}
+
+func r2_rec(name, rows, cols, values) {
+    let s = name + "|" + str(rows) + "|" + str(cols) + "|"
+    let i = 0
+    while (i < len(values)) {
+        s = s + str(values[i])
+        if (i + 1 < len(values)) { s = s + "," }
+        i = i + 1
+    }
+    return s
+}
+
+func r2_put(state, name, rows, cols, values) {
+    let out = []
+    let nr = r2_rec(name, rows, cols, values)
+    let found = 0
+    let i = 0
+    while (i < len(state)) {
+        let f = split(state[i], "|")
+        if (f[0] == name) { push(out, nr); found = 1 } else { push(out, state[i]) }
+        i = i + 1
+    }
+    if (found == 0) { push(out, nr) }
+    return out
+}
+
+func r2_vals(rec) {
+    let f = split(rec, "|")
+    return r2_nums(f[3])
+}
+
+func r2_dim(rec) {
+    let f = split(rec, "|")
+    return int(f[1]) * int(f[2])
+}
+
+func r2_isqrt(n) {
+    if (n <= 0) { return 0 }
+    let x = n
+    let y = (x + 1) / 2
+    while (y < x) {
+        x = y
+        y = (x + n / x) / 2
+    }
+    return x
+}
+
+func r2_transpose(state, name) {
+    let rec = r2_find(state, name)
+    if (rec == "") { print("R2 ERROR unknown_matrix " + name); return state }
+    let f = split(rec, "|")
+    let rows = int(f[1])
+    let cols = int(f[2])
+    let v = r2_vals(rec)
+    let out = []
+    let c = 0
+    while (c < cols) {
+        let r = 0
+        while (r < rows) {
+            push(out, v[r * cols + c])
+            r = r + 1
+        }
+        c = c + 1
+    }
+    let ns = r2_put(state, name + "T", cols, rows, out)
+    print("R2 TRANSPOSE " + name + "T " + str(cols) + "x" + str(rows))
+    return ns
+}
+
+func r2_add(state, an, bn) {
+    let ra = r2_find(state, an)
+    let rb = r2_find(state, bn)
+    if (ra == "" || rb == "") { print("R2 ERROR unknown_matrix"); return state }
+    if (r2_dim(ra) != r2_dim(rb)) { print("R2 ERROR dimension_mismatch"); return state }
+    let av = r2_vals(ra)
+    let bv = r2_vals(rb)
+    let out = []
+    let i = 0
+    while (i < len(av)) {
+        push(out, av[i] + bv[i])
+        i = i + 1
+    }
+    let f = split(ra, "|")
+    let ns = r2_put(state, an + "+" + bn, int(f[1]), int(f[2]), out)
+    print("R2 ADD " + an + "+" + bn + " first=" + str(out[0]))
+    return ns
+}
+
+func r2_dot(state, an, bn) {
+    let ra = r2_find(state, an)
+    let rb = r2_find(state, bn)
+    if (ra == "" || rb == "") { print("R2 ERROR unknown_matrix"); return }
+    let av = r2_vals(ra)
+    let bv = r2_vals(rb)
+    if (len(av) != len(bv)) { print("R2 ERROR vector_length_mismatch"); return }
+    let sum = 0
+    let i = 0
+    while (i < len(av)) {
+        sum = sum + av[i] * bv[i]
+        i = i + 1
+    }
+    print("R2 DOT " + an + "." + bn + " = " + str(sum))
+}
+
+func r2_det(state, name) {
+    let rec = r2_find(state, name)
+    if (rec == "") { print("R2 ERROR unknown_matrix"); return }
+    let f = split(rec, "|")
+    let n = int(f[1])
+    let m = int(f[2])
+    if (n != m) { print("R2 ERROR not_square"); return }
+    let v = r2_vals(rec)
+    if (n == 1) { print("R2 DET " + name + " = " + str(v[0])); return }
+    if (n == 2) {
+        let d = v[0] * v[3] - v[1] * v[2]
+        print("R2 DET " + name + " = " + str(d))
+        return
+    }
+    if (n == 3) {
+        let d = v[0] * (v[4] * v[8] - v[5] * v[7]) - v[1] * (v[3] * v[8] - v[5] * v[6]) + v[2] * (v[3] * v[7] - v[4] * v[6])
+        print("R2 DET " + name + " = " + str(d))
+        return
+    }
+    print("R2 ERROR unsupported_order")
+}
+
+func r2_stats(state, name) {
+    let rec = r2_find(state, name)
+    if (rec == "") { print("R2 ERROR unknown_matrix"); return }
+    let v = r2_vals(rec)
+    let sum = 0
+    let i = 0
+    while (i < len(v)) {
+        sum = sum + v[i]
+        i = i + 1
+    }
+    let mean100 = (sum * 100) / len(v)
+    let acc = 0
+    i = 0
+    while (i < len(v)) {
+        let d = v[i] * 100 - mean100
+        acc = acc + d * d
+        i = i + 1
+    }
+    let var100 = acc / (len(v) * 100)
+    let sd100 = r2_isqrt(var100 * 100)
+    print("R2 STATS " + name + " n=" + str(len(v)) + " mean100=" + str(mean100) + " var100=" + str(var100) + " sd100=" + str(sd100))
+}
+
+func r2_validate(state, name) {
+    let rec = r2_find(state, name)
+    if (rec == "") { print("R2 VALIDATE " + name + " FAIL missing"); return }
+    let f = split(rec, "|")
+    let rows = int(f[1])
+    let cols = int(f[2])
+    let v = r2_vals(rec)
+    if (rows <= 0 || cols <= 0) { print("R2 VALIDATE " + name + " FAIL bad_dimensions"); return }
+    if (len(v) != rows * cols) { print("R2 VALIDATE " + name + " FAIL bad_value_count"); return }
+    print("R2 VALIDATE " + name + " OK " + str(rows) + "x" + str(cols))
+}
+
+func r2_save(path, state) {
+    let out = ""
+    let i = 0
+    while (i < len(state)) {
+        out = out + state[i] + "\n"
+        i = i + 1
+    }
+    writeFile(path, out)
+}
+
+func r2_run() {
+    let state = r2_lines("data/r2_state.dat")
+    let cmds = r2_lines("data/r2_commands.dat")
+    let i = 0
+    while (i < len(cmds)) {
+        let f = split(cmds[i], "|")
+        let op = f[0]
+        if (op == "MATRIX") {
+            let vals = r2_nums(f[4])
+            if (int(f[2]) * int(f[3]) != len(vals)) { print("R2 ERROR bad_value_count " + f[1]) }
+            else { state = r2_put(state, f[1], int(f[2]), int(f[3]), vals) }
+        }
+        if (op == "TRANSPOSE") { state = r2_transpose(state, f[1]) }
+        if (op == "ADD") { state = r2_add(state, f[1], f[2]) }
+        if (op == "DOT") { r2_dot(state, f[1], f[2]) }
+        if (op == "DET") { r2_det(state, f[1]) }
+        if (op == "STATS") { r2_stats(state, f[1]) }
+        if (op == "VALIDATE") { r2_validate(state, f[1]) }
+        i = i + 1
+    }
+    r2_save("data/r2_state.dat", state)
+    r2_save("data/r2_report.dat", state)
+    print("R2_SCIENTIFIC_OK matrices=" + str(len(state)))
+}
